@@ -112,13 +112,24 @@ resource "aws_iam_role" "eks_kubectl_role" {
 }
 
 # 3. اتصال سیاست دسترسی EKS (مجوزهای مورد نیاز برای مدیریت کلاستر)
-resource "aws_iam_role_policy_attachment" "eks_kubectl_attach_policy" {
-  role       = aws_iam_role.eks_kubectl_role.name
-  # سیاست مدیریت شده برای دسترسی کامل به EKS.
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy" 
+resource "aws_iam_role_policy" "eks_kubectl_describe_policy" {
+  name = "eks-kubectl-describe-policy"
+  role = aws_iam_role.eks_kubectl_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = [
+          "eks:DescribeCluster"
+        ]
+        # محدود کردن دسترسی فقط به همین کلاستر خاص
+        Resource = aws_eks_cluster.eks_cluster.arn
+      }
+    ]
+  })
 }
-
-
 
 ###########################
 # EKS Access Entry: مجوز دادن به نقش جدید برای دسترسی به کلاستر
