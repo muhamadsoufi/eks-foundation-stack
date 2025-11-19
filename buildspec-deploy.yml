@@ -8,7 +8,7 @@ env:
     # Name of the EKS cluster
     EKS_CLUSTER_NAME: "sales-dept-dev-eksdemo"
     # IAM Role ARN used to assume access to EKS for kubectl
-    EKS_KUBECTL_ROLE_ARN: "arn:aws:iam::940482451690:role/deployphase-codebuild-eks-devops-role"
+    EKS_KUBECTL_ROLE_ARN: "arn:aws:iam::940482451690:role/EKS-Kubectl-Deployment-Role"
 
 phases:
   install:

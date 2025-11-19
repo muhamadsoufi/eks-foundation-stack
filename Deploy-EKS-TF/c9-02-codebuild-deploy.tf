@@ -12,68 +12,48 @@ data "aws_iam_policy_document" "codebuild_deploy_assume_role" {
   }
 }
 
+# 2. تعریف نقش CodeBuild
 resource "aws_iam_role" "codebuild_deploy_role" {
   name               = "deployphase-codebuild-eks-devops-role"
   assume_role_policy = data.aws_iam_policy_document.codebuild_deploy_assume_role.json
 }
 
+# 3. سیاست دسترسی CodeBuild (مجوزهای عمومی و فرض نقش دوم)
 resource "aws_iam_role_policy" "codebuild_deploy_policy" {
   name = "deployphase-codebuild-policy"
   role = aws_iam_role.codebuild_deploy_role.id
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
+      # دسترسی به CloudWatch Logs
       {
         Effect   = "Allow"
-        Action   = ["logs:CreateLogGroup","logs:CreateLogStream","logs:PutLogEvents"]
+        Action   = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"]
         Resource = "*"
       },
+      # دسترسی به CodePipeline S3 Bucket
       {
         Effect   = "Allow"
         Action   = ["s3:*"]
-        Resource = [
-          aws_s3_bucket.codepipeline_bucket.arn,
-          "${aws_s3_bucket.codepipeline_bucket.arn}/*"
-        ]
+        Resource = [aws_s3_bucket.codepipeline_bucket.arn, "${aws_s3_bucket.codepipeline_bucket.arn}/*"]
       },
+      # دسترسی به CodeStar Connection
       {
         Effect   = "Allow"
-        Action   = ["codestar-connections:GetConnection","codestar-connections:GetConnectionToken"]
+        Action   = ["codestar-connections:GetConnection", "codestar-connections:GetConnectionToken"]
         Resource = [aws_codestarconnections_connection.eks-application.arn]
-      }
-    ]
-  })
-}
-
-resource "aws_iam_role_policy" "codebuild_deploy_ecr" {
-  name = "deployphase-codebuild-ecr-access"
-  role = aws_iam_role.codebuild_deploy_role.id
-
-  policy = jsonencode({
-    Version = "2012-10-17",
-    Statement = [
+      },
+      # دسترسی ECR
       {
         Effect   = "Allow"
-        Action   = [
-          "ecr:*"
-        ]
+        Action   = ["ecr:*"]
         Resource = "*"
-      }
-    ]
-  })
-}
-
-resource "aws_iam_role_policy" "codebuild_deploy_eks_access" {
-  name = "deployphase-codebuild-eks-access"
-  role = aws_iam_role.codebuild_deploy_role.id
-
-  policy = jsonencode({
-  Version = "2012-10-17",
-    Statement = [
+      },
+      # 💥 مجوز کلیدی: اجازه می‌دهد این نقش، نقش EKS Kubectl را assume کند 💥
       {
         Effect   = "Allow"
-        Action   = ["eks:DescribeCluster", "eks:AccessKubernetesApi"]
-        Resource = aws_eks_cluster.eks_cluster.arn 
+        Action   = ["sts:AssumeRole"]
+        Resource = aws_iam_role.eks_kubectl_role.arn # <-- نقش جدید EKS
       }
     ]
   })
@@ -111,20 +91,50 @@ resource "aws_codebuild_project" "deploy_eks_devops" {
   }
 }
 
-
 ###########################
-resource "aws_eks_access_entry" "codebuild_deploy_access_entry" {
-  cluster_name      = aws_eks_cluster.eks_cluster.name
-  principal_arn     = aws_iam_role.codebuild_deploy_role.arn
-  type              = "STANDARD"
+# IAM Role for EKS Kubectl #
+###########################
+data "aws_iam_policy_document" "eks_kubectl_assume_role" {
+  statement {
+    effect  = "Allow"
+    principals {
+      type        = "AWS"
+      identifiers = [aws_iam_role.codebuild_deploy_role.arn] # ارجاع به نقش CodeBuild
+    }
+    actions = ["sts:AssumeRole"]
+  }
 }
 
-resource "aws_eks_access_policy_association" "codebuild_deploy_access_policy_association" {
+# 2. تعریف نقش EKS Kubectl (جدید)
+resource "aws_iam_role" "eks_kubectl_role" {
+  name               = "EKS-Kubectl-Deployment-Role"
+  assume_role_policy = data.aws_iam_policy_document.eks_kubectl_assume_role.json
+}
+
+# 3. اتصال سیاست دسترسی EKS (مجوزهای مورد نیاز برای مدیریت کلاستر)
+resource "aws_iam_role_policy_attachment" "eks_kubectl_attach_policy" {
+  role       = aws_iam_role.eks_kubectl_role.name
+  # سیاست مدیریت شده برای دسترسی کامل به EKS.
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy" 
+}
+
+
+
+###########################
+# EKS Access Entry: مجوز دادن به نقش جدید برای دسترسی به کلاستر
+###########################
+resource "aws_eks_access_entry" "eks_kubectl_access_entry" { # نام منبع تغییر کرد
+  cluster_name    = aws_eks_cluster.eks_cluster.name
+  principal_arn   = aws_iam_role.eks_kubectl_role.arn # 💥 استفاده از نقش جدید EKS 💥
+  type            = "STANDARD"
+}
+
+resource "aws_eks_access_policy_association" "eks_kubectl_access_policy_association" { # نام منبع تغییر کرد
   cluster_name  = aws_eks_cluster.eks_cluster.name
   policy_arn    = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
-  principal_arn = aws_iam_role.codebuild_deploy_role.arn
+  principal_arn = aws_iam_role.eks_kubectl_role.arn # 💥 استفاده از نقش جدید EKS 💥
 
   access_scope {
-    type       = "cluster"
+    type        = "cluster"
   }
 }
