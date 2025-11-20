@@ -19,22 +19,17 @@ metadata:
     alb.ingress.kubernetes.io/unhealthy-threshold-count: '2'   
     ## SSL Settings
     alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}, {"HTTP":80}]'
-    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-east-1:940482451690:certificate/1bb063c9-b56c-41af-966f-675ea9f135d8
-    #alb.ingress.kubernetes.io/ssl-policy: ELBSecurityPolicy-TLS-1-1-2017-01 #Optional (Picks default if not used)    
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-east-1:<Account-ID>:certificate/.....
+    #alb.ingress.kubernetes.io/ssl-policy: ELBSecurityPolicy-TLS-1-1-2017-01    
     # SSL Redirect Setting
     alb.ingress.kubernetes.io/ssl-redirect: '443'
     # External DNS - For creating a Record Set in Route53
-    external-dns.alpha.kubernetes.io/hostname: xxxxxx.cicd.click
+    external-dns.alpha.kubernetes.io/hostname: app.cicd.click
 spec:
-  ingressClassName: alb   # Ingress Class                  
+  ingressClassName: alb                 
   defaultBackend:
     service:
       name: eks-devops-nodeport-service
       port:
         number: 80     
 
-# Important Note-1: In path based routing order is very important, if we are going to use  "/*", try to use it at the end of all rules.                                                            
-# 1. If  "spec.ingressClassName: my-aws-ingress-class" not specified, will reference default ingress class on this kubernetes cluster
-# 2. Default Ingress class is nothing but for which ingress class we have the annotation `ingressclass.kubernetes.io/is-default-class: "true"`
-      
-    
