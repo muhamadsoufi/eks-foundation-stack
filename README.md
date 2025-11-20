@@ -159,7 +159,5 @@ terraform destroy --auto-approve
 ---
 
 ## 👤 Author
-
-**Your Name**
 * Github: (https://github.com/muhamadsoufi)
 * LinkedIn: (www.linkedin.com/in/mohammad-hosein-soufi-ghorbani)
