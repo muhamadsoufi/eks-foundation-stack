@@ -9,7 +9,7 @@
 ![Kubernetes](https://img.shields.io/badge/Kubernetes-EKS-blue?style=for-the-badge&logo=kubernetes)
 ![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
 
-## 📖 Overview
+#### 📖 Overview
 
 This project provisions a production-grade **Amazon EKS (Elastic Kubernetes Service)** cluster within a custom **3-Tier VPC Architecture** using **Terraform**. It implements modern DevOps best practices, including Infrastructure as Code (IaC), automated CI/CD pipelines (AWS CodePipeline & CodeBuild), and Devops-style deployments.
 
